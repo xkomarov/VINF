@@ -1,0 +1,191 @@
+{
+  "encoding": "o200k_base",
+  "corpus": {
+    "awards": {
+      "pages": 308,
+      "bytes": 120973214,
+      "html_tokens": 48487378,
+      "text_tokens": 202067
+    },
+    "driver profile": {
+      "pages": 23,
+      "bytes": 9716836,
+      "html_tokens": 3765682,
+      "text_tokens": 23104
+    },
+    "driver season": {
+      "pages": 1679,
+      "bytes": 640198151,
+      "html_tokens": 254328486,
+      "text_tokens": 1200713
+    },
+    "event / circuit": {
+      "pages": 232,
+      "bytes": 119972751,
+      "html_tokens": 45140807,
+      "text_tokens": 250748
+    },
+    "other": {
+      "pages": 12,
+      "bytes": 6502160,
+      "html_tokens": 2542346,
+      "text_tokens": 16066
+    },
+    "season standings": {
+      "pages": 231,
+      "bytes": 84192704,
+      "html_tokens": 33019137,
+      "text_tokens": 169087
+    },
+    "session results": {
+      "pages": 8827,
+      "bytes": 3445652279,
+      "html_tokens": 1347701441,
+      "text_tokens": 8606605
+    },
+    "team profile": {
+      "pages": 12,
+      "bytes": 5376829,
+      "html_tokens": 2071399,
+      "text_tokens": 11048
+    },
+    "team season": {
+      "pages": 715,
+      "bytes": 269663195,
+      "html_tokens": 108695829,
+      "text_tokens": 429337
+    }
+  },
+  "tables": {
+    "awards": {
+      "rows": 4647,
+      "bytes": 827891,
+      "tokens": 304389
+    },
+    "circuits": {
+      "rows": 232,
+      "bytes": 500467,
+      "tokens": 122460
+    },
+    "driver_season_results": {
+      "rows": 21495,
+      "bytes": 5133502,
+      "tokens": 1943528
+    },
+    "driver_standings": {
+      "rows": 1679,
+      "bytes": 372720,
+      "tokens": 137281
+    },
+    "drivers": {
+      "rows": 22,
+      "bytes": 58653,
+      "tokens": 15850
+    },
+    "fastest_laps": {
+      "rows": 17198,
+      "bytes": 3990339,
+      "tokens": 1607438
+    },
+    "grand_prix": {
+      "rows": 1173,
+      "bytes": 231759,
+      "tokens": 82253
+    },
+    "pit_stops": {
+      "rows": 22788,
+      "bytes": 5839793,
+      "tokens": 2331195
+    },
+    "practice": {
+      "rows": 49183,
+      "bytes": 10295271,
+      "tokens": 4020469
+    },
+    "qualifying": {
+      "rows": 41018,
+      "bytes": 8520773,
+      "tokens": 3416811
+    },
+    "race_results": {
+      "rows": 25780,
+      "bytes": 5812130,
+      "tokens": 2261076
+    },
+    "races": {
+      "rows": 1169,
+      "bytes": 244256,
+      "tokens": 92970
+    },
+    "schedule": {
+      "rows": 1131,
+      "bytes": 136294,
+      "tokens": 54295
+    },
+    "sprint_grid": {
+      "rows": 610,
+      "bytes": 120699,
+      "tokens": 47008
+    },
+    "sprint_qualifying": {
+      "rows": 488,
+      "bytes": 115068,
+      "tokens": 48753
+    },
+    "sprint_results": {
+      "rows": 611,
+      "bytes": 141434,
+      "tokens": 55252
+    },
+    "starting_grid": {
+      "rows": 25838,
+      "bytes": 5136083,
+      "tokens": 1958716
+    },
+    "team_season_results": {
+      "rows": 11630,
+      "bytes": 1628420,
+      "tokens": 632576
+    },
+    "team_standings": {
+      "rows": 716,
+      "bytes": 66203,
+      "tokens": 26672
+    },
+    "teams": {
+      "rows": 12,
+      "bytes": 26325,
+      "tokens": 7355
+    }
+  },
+  "index": {
+    "vocabulary": 4972,
+    "types": {
+      "driver": {
+        "documents": 22,
+        "index_terms": 4470,
+        "tokens": 9062
+      },
+      "driver_season": {
+        "documents": 1679,
+        "index_terms": 49301,
+        "tokens": 68386
+      },
+      "grand_prix": {
+        "documents": 1173,
+        "index_terms": 155668,
+        "tokens": 270444
+      },
+      "team": {
+        "documents": 12,
+        "index_terms": 1887,
+        "tokens": 3447
+      },
+      "team_season": {
+        "documents": 716,
+        "index_terms": 23370,
+        "tokens": 31291
+      }
+    }
+  }
+}

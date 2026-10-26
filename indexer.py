@@ -76,7 +76,6 @@ def unique(values) -> list[str]:
 
 
 def grand_prix_docs() -> list[dict]:
-    """One document per race: header, winner, participants, pole, fastest lap."""
     races = group(load("races"), "season", "race_id")
     results = group(load("race_results"), "season", "race_id")
     grids = group(load("starting_grid"), "season", "race_id")
@@ -105,7 +104,6 @@ def grand_prix_docs() -> list[dict]:
 
 
 def circuit_docs() -> list[dict]:
-    """One document per circuit: Grand Prix names held there, track stats and description of the latest event."""
     races = group(load("races"), "season", "race_id")
     by_circuit = group(sorted(load("grand_prix"), key=lambda r: (r["season"], r["race_id"])), "circuit")
     events = {race_key(r["season"], r["gp_slug"]): r for r in load("circuits")}
@@ -132,7 +130,7 @@ def circuit_docs() -> list[dict]:
 
 
 def driver_season_docs() -> list[dict]:
-    """One document per driver and season: standing, teams and the races entered."""
+
     races = group(load("driver_season_results"), "season", "driver_slug")
     docs = []
     for row in load("driver_standings"):
@@ -151,7 +149,7 @@ def driver_season_docs() -> list[dict]:
 
 
 def team_season_docs() -> list[dict]:
-    """One document per team and season: standing, drivers and the races entered."""
+
     races = group(load("team_season_results"), "season", "team_slug")
     drivers = group(load("driver_standings"), "season", "team_slug")
     docs = []
@@ -184,7 +182,6 @@ def build_documents() -> list[dict]:
     return grand_prix_docs() + circuit_docs() + driver_season_docs() + team_season_docs() + profile_docs()
 
 
-# ---------------------------------------------------------------- index
 
 def build_index(docs: list[dict]) -> dict:
     """Inverted index: term -> [[doc, tf], ...] plus document lengths for BM25 / cosine."""
@@ -200,12 +197,12 @@ def build_index(docs: list[dict]) -> dict:
 
 
 def idf_tfidf(n: int, df: int) -> float:
-    """Classic IDF: log(N / df)."""
+
     return math.log(n / df)
 
 
 def idf_bm25(n: int, df: int) -> float:
-    """Robertson-Sparck Jones IDF with +1 so very common terms never go negative."""
+
     return math.log((n - df + 0.5) / (df + 0.5) + 1)
 
 
@@ -213,7 +210,7 @@ IDF = {"tfidf": idf_tfidf, "bm25": idf_bm25}
 
 
 def tfidf_norms(index: dict) -> list[float]:
-    """Euclidean length of every document's (1 + log tf) * idf vector, for cosine similarity."""
+  
     norms = [0.0] * index["n"]
     for postings in index["postings"].values():
         idf = idf_tfidf(index["n"], len(postings))

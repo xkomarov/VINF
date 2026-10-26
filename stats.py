@@ -52,7 +52,6 @@ def init_worker(encoding: str) -> None:
 
 
 def page_stats(filename: str) -> tuple[str, int, int, int]:
-    """(page type, bytes, tokens of the raw HTML, tokens of the visible text)."""
     path = os.path.join(extractor.DATA_DIR, filename)
     with open(path, encoding="utf-8") as f:
         page = f.read()
@@ -90,7 +89,6 @@ def table_stats() -> dict:
 
 
 def index_stats() -> dict:
-    """Index documents by type: own tokenizer (index terms) vs. tiktoken tokens of title + text."""
     if not os.path.exists(indexer.DOCS_FILE):
         return {}
     stats = defaultdict(lambda: {"documents": 0, "index_terms": 0, "tokens": 0})

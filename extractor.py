@@ -1,3 +1,6 @@
+# аннотации вида list[dict] и dict | None не вычисляются при импорте (нужно для Python 3.8 на кластере)
+from __future__ import annotations
+
 import os
 import re
 import html
@@ -268,21 +271,39 @@ HANDLERS = [
 ]
 
 
-def extract_file(filename: str) -> dict:
+def clean(page: str) -> str:
+    # убирает <script>, <style>, <svg> и HTML-комментарии
+    return NOISE.sub("", page)
+
+
+def find_handler(filename: str):
+    # обработчик и результат match по имени файла, либо (None, None)
     if filename in SKIP_PAGES:
-        return {}
+        return None, None
     for pattern, handler in HANDLERS:
         name_match = pattern.match(filename)
-        if not name_match:
-            continue
-        with open(os.path.join(DATA_DIR, filename), encoding="utf-8") as f:
-            page = NOISE.sub("", f.read())
-        try:
-            return handler(name_match, page)
-        except Exception as e:
-            logging.error(f"{filename}: {e}")
-            return {}
-    return {}
+        if name_match:
+            return handler, name_match
+    return None, None
+
+
+def extract_page(filename: str, page: str) -> dict:
+    # чистая функция: имя файла + HTML -> {таблица: [строки]}; без чтения с диска (используется и в Spark)
+    handler, name_match = find_handler(filename)
+    if handler is None:
+        return {}
+    try:
+        return handler(name_match, clean(page))
+    except Exception as e:
+        logging.error(f"{filename}: {e}")
+        return {}
+
+
+def extract_file(filename: str) -> dict:
+    if find_handler(filename)[0] is None:
+        return {}
+    with open(os.path.join(DATA_DIR, filename), encoding="utf-8") as f:
+        return extract_page(filename, f.read())
 
 
 

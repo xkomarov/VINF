@@ -7,3 +7,8 @@ data/
 extracted/
 index/
 crawl_history.csv
+out/*
+data/
+index/
+lucene_index/
+*.bz2

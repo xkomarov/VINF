@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import re
 import sys
@@ -35,16 +37,13 @@ TITLE_BOOST = 3
 SKIP_FIELDS = re.compile(r"_(id|slug|code)$|^(race_id|no|pos|pts|laps|time.*|q\d|lap|stops|number)$")
 
 
-
 def normalize(value: str) -> str:
-    """Lowercase and strip diacritics: 'Räikkönen' -> 'raikkonen'."""
     value = unicodedata.normalize("NFKD", value.lower())
     return "".join(c for c in value if not unicodedata.combining(c))
 
 
 def tokenize(value: str) -> list[str]:
     return [t for t in TOKEN.findall(normalize(value)) if t not in STOPWORDS]
-
 
 
 def load(name: str) -> list[dict]:
@@ -75,6 +74,25 @@ def unique(values) -> list[str]:
     return list(dict.fromkeys(str(v) for v in values if v))
 
 
+def grand_prix_doc(gp: dict, race: dict, results: list, grids: list, fastest: list) -> dict:
+    pole = next((r for r in grids if r.get("pos") == 1), {})
+    lap = next((r for r in fastest if r.get("pos") == 1), {})
+    parts = [
+        row_text(gp), race.get("grand_prix", ""),
+        f"winner {race.get('winner', '')} {race.get('team', '')}",
+        f"pole position {pole.get('driver', '')}" if pole else "",
+        f"fastest lap {lap.get('driver', '')}" if lap else "",
+        " ".join(unique(r.get("driver") for r in results)),
+        " ".join(unique(r.get("team") for r in results)),
+    ]
+    classification = [[r.get("pos", ""), r.get("driver", ""), r.get("team", ""),
+                       r.get("time_retired", ""), r.get("pts", "")] for r in results]
+    return {"id": f"gp/{gp['season']}/{gp['race_id']}", "type": "grand_prix",
+            "title": gp.get("official_name") or f"{gp['season']} {gp['gp_slug']}",
+            "text": " ".join(p for p in parts if p),
+            "results": classification}
+
+
 def grand_prix_docs() -> list[dict]:
     races = group(load("races"), "season", "race_id")
     results = group(load("race_results"), "season", "race_id")
@@ -83,24 +101,27 @@ def grand_prix_docs() -> list[dict]:
     docs = []
     for gp in load("grand_prix"):
         key = (gp["season"], gp["race_id"])
-        race = races.get(key, [{}])[0]
-        pole = next((r for r in grids.get(key, []) if r.get("pos") == 1), {})
-        lap = next((r for r in fastest.get(key, []) if r.get("pos") == 1), {})
-        parts = [
-            row_text(gp), race.get("grand_prix", ""),
-            f"winner {race.get('winner', '')} {race.get('team', '')}",
-            f"pole position {pole.get('driver', '')}" if pole else "",
-            f"fastest lap {lap.get('driver', '')}" if lap else "",
-            " ".join(unique(r.get("driver") for r in results.get(key, []))),
-            " ".join(unique(r.get("team") for r in results.get(key, []))),
-        ]
-        classification = [[r.get("pos", ""), r.get("driver", ""), r.get("team", ""),
-                           r.get("time_retired", ""), r.get("pts", "")] for r in results.get(key, [])]
-        docs.append({"id": f"gp/{gp['season']}/{gp['race_id']}", "type": "grand_prix",
-                     "title": gp.get("official_name") or f"{gp['season']} {gp['gp_slug']}",
-                     "text": " ".join(p for p in parts if p),
-                     "results": classification})
+        docs.append(grand_prix_doc(gp, races.get(key, [{}])[0], results.get(key, []),
+                                   grids.get(key, []), fastest.get(key, [])))
     return docs
+
+
+def circuit_doc(name: str, held: list) -> dict:
+    gps = [gp for gp, _, _ in held]
+    event = next((e for _, _, e in reversed(held) if e and e.get("about")), {})
+    parts = [
+        name, " ".join(unique(gp.get("locality") for gp in gps)),
+        " ".join(unique(race.get("grand_prix") for _, race, _ in held)),
+        event.get("event_name", ""),
+        f"lap record {event['fastest_lap_time_note']}" if event.get("fastest_lap_time_note") else "",
+        event.get("about", ""),
+    ]
+    winners = [[gp["season"], race.get("grand_prix", gp.get("gp_slug", "")), race.get("winner", ""),
+                race.get("team", "")] for gp, race, _ in held]
+    return {"id": f"circuit/{'-'.join(tokenize(name))}", "type": "circuit", "title": name,
+            "text": " ".join(p for p in parts if p),
+            "stats": {k: v for k, v in event.items() if k in CIRCUIT_STATS},
+            "results": winners}
 
 
 def circuit_docs() -> list[dict]:
@@ -109,82 +130,73 @@ def circuit_docs() -> list[dict]:
     events = {race_key(r["season"], r["gp_slug"]): r for r in load("circuits")}
     docs = []
     for (name,), gps in by_circuit.items():
-        held = [(gp, races.get((gp["season"], gp["race_id"]), [{}])[0]) for gp in gps]
-        # newest event page with a description; older races have no event page at all
-        event = next((e for gp in reversed(gps) if (e := events.get(race_key(gp["season"], gp["gp_slug"])))
-                      and e.get("about")), {})
-        parts = [
-            name, " ".join(unique(gp.get("locality") for gp in gps)),
-            " ".join(unique(race.get("grand_prix") for _, race in held)),
-            event.get("event_name", ""),
-            f"lap record {event['fastest_lap_time_note']}" if event.get("fastest_lap_time_note") else "",
-            event.get("about", ""),
-        ]
-        winners = [[gp["season"], race.get("grand_prix", gp.get("gp_slug", "")), race.get("winner", ""),
-                    race.get("team", "")] for gp, race in held]
-        docs.append({"id": f"circuit/{'-'.join(tokenize(name))}", "type": "circuit", "title": name,
-                     "text": " ".join(p for p in parts if p),
-                     "stats": {k: v for k, v in event.items() if k in CIRCUIT_STATS},
-                     "results": winners})
+        held = [(gp, races.get((gp["season"], gp["race_id"]), [{}])[0],
+                 events.get(race_key(gp["season"], gp["gp_slug"]))) for gp in gps]
+        docs.append(circuit_doc(name, held))
     return docs
+
+
+def driver_season_doc(row: dict, entries: list) -> dict:
+    champion = "world champion" if row.get("pos") == 1 else ""
+    parts = [row_text(row), champion, f"position {row.get('pos', '')}",
+             " ".join(unique(r.get("team") for r in entries)),
+             " ".join(unique(r.get("grand_prix") for r in entries))]
+    races_entered = [[r.get("grand_prix", ""), r.get("team", ""), r.get("race_pos", ""), r.get("pts", "")]
+                     for r in entries]
+    return {"id": f"driver/{row['season']}/{row.get('driver_slug')}", "type": "driver_season",
+            "title": f"{row.get('driver', '')} - {row['season']} season",
+            "text": " ".join(p for p in parts if p),
+            "results": races_entered}
 
 
 def driver_season_docs() -> list[dict]:
-
     races = group(load("driver_season_results"), "season", "driver_slug")
-    docs = []
-    for row in load("driver_standings"):
-        entries = races.get((row["season"], row.get("driver_slug")), [])
-        champion = "world champion" if row.get("pos") == 1 else ""
-        parts = [row_text(row), champion, f"position {row.get('pos', '')}",
-                 " ".join(unique(r.get("team") for r in entries)),
-                 " ".join(unique(r.get("grand_prix") for r in entries))]
-        races_entered = [[r.get("grand_prix", ""), r.get("team", ""), r.get("race_pos", ""), r.get("pts", "")]
-                         for r in entries]
-        docs.append({"id": f"driver/{row['season']}/{row.get('driver_slug')}", "type": "driver_season",
-                     "title": f"{row.get('driver', '')} - {row['season']} season",
-                     "text": " ".join(p for p in parts if p),
-                     "results": races_entered})
-    return docs
+    return [driver_season_doc(row, races.get((row["season"], row.get("driver_slug")), []))
+            for row in load("driver_standings")]
+
+
+def team_season_doc(row: dict, races: list, drivers: list) -> dict:
+    champion = "constructors champion" if row.get("pos") == 1 else ""
+    parts = [row_text(row), champion, f"position {row.get('pos', '')}",
+             " ".join(unique(r.get("driver") for r in drivers)),
+             " ".join(unique(r.get("grand_prix") for r in races))]
+    return {"id": f"team/{row['season']}/{row.get('team_slug')}", "type": "team_season",
+            "title": f"{row.get('team', '')} - {row['season']} season",
+            "text": " ".join(p for p in parts if p)}
 
 
 def team_season_docs() -> list[dict]:
-
     races = group(load("team_season_results"), "season", "team_slug")
     drivers = group(load("driver_standings"), "season", "team_slug")
     docs = []
     for row in load("team_standings"):
         key = (row["season"], row.get("team_slug"))
-        champion = "constructors champion" if row.get("pos") == 1 else ""
-        parts = [row_text(row), champion, f"position {row.get('pos', '')}",
-                 " ".join(unique(r.get("driver") for r in drivers.get(key, []))),
-                 " ".join(unique(r.get("grand_prix") for r in races.get(key, [])))]
-        docs.append({"id": f"team/{row['season']}/{row.get('team_slug')}", "type": "team_season",
-                     "title": f"{row.get('team', '')} - {row['season']} season",
-                     "text": " ".join(p for p in parts if p)})
+        docs.append(team_season_doc(row, races.get(key, []), drivers.get(key, [])))
     return docs
+
+
+def driver_profile_doc(row: dict) -> dict:
+    return {"id": f"driver/{row['driver_slug']}", "type": "driver",
+            "title": f"{row.get('first_name', '')} {row.get('last_name', '')}".strip(),
+            "text": row_text({k: v for k, v in row.items() if isinstance(v, str)})}
+
+
+def team_profile_doc(row: dict) -> dict:
+    values = {k: " ".join(v) if isinstance(v, list) else v for k, v in row.items()}
+    return {"id": f"team/{row['team_slug']}", "type": "team", "title": row.get("team", ""),
+            "text": row_text({k: v for k, v in values.items() if isinstance(v, str)})}
 
 
 def profile_docs() -> list[dict]:
-    docs = []
-    for row in load("drivers"):
-        docs.append({"id": f"driver/{row['driver_slug']}", "type": "driver",
-                     "title": f"{row.get('first_name', '')} {row.get('last_name', '')}".strip(),
-                     "text": row_text({k: v for k, v in row.items() if isinstance(v, str)})})
-    for row in load("teams"):
-        values = {k: " ".join(v) if isinstance(v, list) else v for k, v in row.items()}
-        docs.append({"id": f"team/{row['team_slug']}", "type": "team", "title": row.get("team", ""),
-                     "text": row_text({k: v for k, v in values.items() if isinstance(v, str)})})
-    return docs
+    return [driver_profile_doc(row) for row in load("drivers")] + \
+           [team_profile_doc(row) for row in load("teams")]
 
 
 def build_documents() -> list[dict]:
     return grand_prix_docs() + circuit_docs() + driver_season_docs() + team_season_docs() + profile_docs()
 
 
-
 def build_index(docs: list[dict]) -> dict:
-    """Inverted index: term -> [[doc, tf], ...] plus document lengths for BM25 / cosine."""
     postings = defaultdict(list)
     lengths = []
     for doc_id, doc in enumerate(docs):
@@ -228,7 +240,6 @@ def save(docs: list[dict], index: dict) -> None:
         json.dump(index, f, ensure_ascii=False)
 
 
-
 class Searcher:
     def __init__(self):
         with open(DOCS_FILE, encoding="utf-8") as f:
@@ -238,7 +249,6 @@ class Searcher:
         self.norms = tfidf_norms(self.index)
 
     def score_tfidf(self, terms: Counter) -> dict:
-        """Cosine similarity of (1 + log tf) * idf vectors."""
         n, scores, query_norm = self.index["n"], defaultdict(float), 0.0
         for term, qtf in terms.items():
             postings = self.index["postings"].get(term)
@@ -297,7 +307,6 @@ def print_results(method: str, results: list, rows: int) -> None:
         if rows and doc.get("results"):
             print_table(RESULT_HEADERS[doc["type"]], doc["results"], rows)
             print()
-
 
 
 def build() -> None:

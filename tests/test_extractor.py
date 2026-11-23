@@ -1,9 +1,3 @@
-"""Unit tests for the REGEX extractors in extractor.py.
-
-Helper regexes are tested on small HTML snippets, page handlers on 25 real pages from data/
-(expected values were checked against the pages and the official results).
-Run: python -m pytest tests/test_extractor.py (from formula1/)
-"""
 import os
 import unittest
 
@@ -16,8 +10,6 @@ def extract(filename: str) -> dict:
         raise unittest.SkipTest(f"{filename} is not crawled")
     return e.extract_file(filename)
 
-
-# ---------------------------------------------------------------- helpers
 
 class HelperTest(unittest.TestCase):
     def test_text_strips_tags_entities_and_spaces(self):
@@ -83,8 +75,6 @@ class HelperTest(unittest.TestCase):
         m = e.SESSION_PAGE.match("results_2023_races_1171_saudi-arabia_practice_2.html")
         self.assertEqual(m.groups(), ("2023", "1171", "saudi-arabia", "practice", "2"))
 
-
-# ---------------------------------------------------------------- session pages
 
 class SessionPageTest(unittest.TestCase):
     BAHRAIN = {"season": "2023", "race_id": "1141", "gp_slug": "bahrain"}
@@ -161,8 +151,6 @@ class SessionPageTest(unittest.TestCase):
                          ("19 Jan 1958", "Autódromo Juan y Oscar Gálvez", "Argentina"))
 
 
-# ---------------------------------------------------------------- season, award, driver/team season pages
-
 class SeasonPageTest(unittest.TestCase):
     def test_races_2023(self):
         rows = extract("results_2023_races.html")["races"]
@@ -224,8 +212,6 @@ class SeasonPageTest(unittest.TestCase):
         self.assertEqual(len(rows), 11)
         self.assertEqual((rows[0]["grand_prix"], rows[0]["date"], rows[0]["pts"]), ("Argentina", "19 Jan", "6"))
 
-
-# ---------------------------------------------------------------- event, driver and team pages
 
 class ProfilePageTest(unittest.TestCase):
     def test_event_2023_bahrain(self):

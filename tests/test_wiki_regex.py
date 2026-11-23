@@ -1,4 +1,3 @@
-# Тесты регулярок и функций чистки из wiki_regex.py на фикстуре в формате дампа.
 from __future__ import annotations
 
 import os
@@ -11,7 +10,6 @@ FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "wiki_sample.xml")
 
 
 def fixture_pages() -> dict:
-    # режем файл по '</page>' так же, как Spark с textinputformat.record.delimiter
     with open(FIXTURE, encoding="utf-8") as f:
         records = f.read().split("</page>")
     pages = [w.parse_page(r) for r in records]
@@ -22,8 +20,6 @@ def fixture_pages() -> dict:
 def pages():
     return fixture_pages()
 
-
-# ---------------------------------------------------------------- страницы
 
 def test_all_pages_found(pages):
     assert len(pages) == 10
@@ -47,16 +43,14 @@ def test_trailing_record_without_page_is_skipped():
     assert w.parse_page("\n</mediawiki>\n") is None
 
 
-# ---------------------------------------------------------------- инфобоксы
-
 def test_infobox_types(pages):
     types = {t: (w.parse_infobox_page(p) or {}).get("wiki_type") for t, p in pages.items()}
     assert types["Kimi Räikkönen"] == "driver"
-    assert types["Nelson Piquet (racing driver)"] == "driver"   # Infobox_Racing_Driver
+    assert types["Nelson Piquet (racing driver)"] == "driver"
     assert types["2021 Monaco Grand Prix"] == "grand_prix"
-    assert types["Circuit de Spa-Francorchamps"] == "circuit"   # Infobox Racetrack
+    assert types["Circuit de Spa-Francorchamps"] == "circuit"
     assert types["McLaren"] == "team"
-    assert types["Formula One"] is None                         # чужой шаблон
+    assert types["Formula One"] is None
     assert types["Empty page"] is None
 
 
@@ -84,7 +78,7 @@ def test_driver_fields(pages):
     assert box["birth_date"] == "1979-10-17"
     assert box["birth_place"] == "Espoo, Finland"
     assert box["championships"] == "1 (2007)"
-    assert box["wins"] == "21"                                  # <ref> удалён
+    assert box["wins"] == "21"
     assert box["first_race"] == "2001 Australian Grand Prix"
     assert "image" in box
 
@@ -120,7 +114,6 @@ def test_person_infobox_only_on_f1_articles():
     assert w.parse_infobox_page({"title": "X", "text": person}) is None
     row = w.parse_infobox_page({"title": "X", "text": person + "\n[[Category:Formula One drivers]]"})
     assert row["wiki_type"] == "driver" and row["template"] == "person"
-
 
 
 @pytest.mark.parametrize("raw, expected", [
@@ -160,7 +153,6 @@ def test_abstract_skips_ipa_template(pages):
 
 def test_infobox_names_census(pages):
     assert w.infobox_names(pages["Formula One"]["text"]) == ["sports league"]
-
 
 
 @pytest.mark.parametrize("raw, expected", [

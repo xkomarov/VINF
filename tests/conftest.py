@@ -1,4 +1,3 @@
-# добавляет formula1/ в sys.path, чтобы тесты импортировали extractor, wiki_regex и т. д.
 import os
 import sys
 

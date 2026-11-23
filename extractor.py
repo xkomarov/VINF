@@ -1,4 +1,3 @@
-# аннотации вида list[dict] и dict | None не вычисляются при импорте (нужно для Python 3.8 на кластере)
 from __future__ import annotations
 
 import os
@@ -75,7 +74,6 @@ def section(page: str, heading: str) -> str:
     return m.group(1) if m else ""
 
 
-
 def parse_cell(column: str, cell: str) -> dict:
   
     values = {}
@@ -119,7 +117,6 @@ def parse_table(page: str) -> list[dict]:
     return rows
 
 
-
 def parse_stats(page: str) -> dict:
 
     record, prefix = {}, ""
@@ -144,7 +141,6 @@ def parse_stats(page: str) -> dict:
 def section_text(page: str, heading: str) -> str:
     body = re.sub(r"<dl\b.*?</dl>", "", section(page, heading), flags=re.S)
     return " ".join(t for t in (text(p) for p in PARAGRAPH.findall(body)) if t)
-
 
 
 def event_header(page: str) -> dict:
@@ -173,7 +169,7 @@ def session_page(name_match, page) -> dict:
     rows = [{**ids, "session": session, **row} for row in parse_table(page)]
 
     header = event_header(page)
-    header["official_name"] = re.sub(r"\s+-\s+[^-]+$", "", header["official_name"])  # drop " - RACE RESULT"
+    header["official_name"] = re.sub(r"\s+-\s+[^-]+$", "", header["official_name"])
     return {table: rows, "grand_prix": [{**ids, **header}]}
 
 
@@ -189,7 +185,7 @@ def award_page(name_match, page) -> dict:
 
 
 def driver_season_page(name_match, page) -> dict:
-    ids = name_match.groupdict()  # season, driver_id, driver_slug
+    ids = name_match.groupdict()
     return {"driver_season_results": [{**ids, **row} for row in parse_table(page)]}
 
 
@@ -234,7 +230,6 @@ def driver_page(name_match, page) -> dict:
 
     title = H1.search(page)
     if title:
-        # <h1><span>Max</span> <span>Verstappen</span></h1>
         names = [text(s) for s in re.findall(r"<span\b[^>]*>([^<]+)</span>", title.group(1))]
         if names:
             record["first_name"] = names[0]
@@ -250,7 +245,7 @@ def driver_page(name_match, page) -> dict:
 
 
 def team_page(name_match, page) -> dict:
-    ids = name_match.groupdict()  # team_slug
+    ids = name_match.groupdict()
     record = {**ids, "team": find_text(H1, page)}
     record["drivers"] = [f"{text(a)} {text(b)}" for a, b in re.findall(
         r"<p\b[^>]*>([^<]+)</p>\s*<p\b[^>]*>([^<]+)</p>\s*<div\b[^>]*>\s*<p\b", section(page, "DRIVERS"))]
@@ -272,12 +267,10 @@ HANDLERS = [
 
 
 def clean(page: str) -> str:
-    # убирает <script>, <style>, <svg> и HTML-комментарии
     return NOISE.sub("", page)
 
 
 def find_handler(filename: str):
-    # обработчик и результат match по имени файла, либо (None, None)
     if filename in SKIP_PAGES:
         return None, None
     for pattern, handler in HANDLERS:
@@ -288,7 +281,6 @@ def find_handler(filename: str):
 
 
 def extract_page(filename: str, page: str) -> dict:
-    # чистая функция: имя файла + HTML -> {таблица: [строки]}; без чтения с диска (используется и в Spark)
     handler, name_match = find_handler(filename)
     if handler is None:
         return {}
@@ -304,7 +296,6 @@ def extract_file(filename: str) -> dict:
         return {}
     with open(os.path.join(DATA_DIR, filename), encoding="utf-8") as f:
         return extract_page(filename, f.read())
-
 
 
 def typed(value):

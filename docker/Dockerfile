@@ -1,0 +1,6 @@
+FROM coady/pylucene@sha256:4a37ca24019a9f1d2d94196323ccc8d7b465174d9229b2328429749989d4d05e
+
+RUN pip install --no-cache-dir pytest==8.3.5
+
+ENV PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1
+WORKDIR /app/formula1

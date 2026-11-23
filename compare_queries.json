@@ -1,0 +1,12 @@
+[
+  {"id": "q1", "question": "Monaco GP 1988 - Senna's crash race (who won it?)", "lucene_query": "title:monaco AND season:1988 AND type:grand_prix", "old_index_query": "monaco grand prix 1988 senna"},
+  {"id": "q2", "question": "Which Ferrari drivers became world champions?", "lucene_query": "position:1 AND season:[* TO 2025] AND type:driver_season AND team:ferrari", "old_index_query": "world champion ferrari"},
+  {"id": "q3", "question": "Which British Grands Prix did Lewis Hamilton win at Silverstone?", "lucene_query": "winner:\"lewis hamilton\" AND circuit:silverstone", "old_index_query": "lewis hamilton silverstone"},
+  {"id": "q4", "question": "Max Verstappen - profile and seasons", "lucene_query": "title:\"max verstappen\"", "old_index_query": "max verstappen"},
+  {"id": "q5", "question": "In which seasons did Red Bull Racing win the constructors' title?", "lucene_query": "team:\"red bull racing\" AND position:1 AND season:[* TO 2025] AND type:team_season", "old_index_query": "red bull racing constructors champion"},
+  {"id": "q6", "question": "Kimi Raikonen 2007 title (typo in the name)", "lucene_query": "title:raikonen~2 AND season:2007", "old_index_query": "kimi raikonen 2007 champion"},
+  {"id": "q7", "question": "Who won at Monza in the 1950s?", "lucene_query": "circuit:monza AND season:[1950 TO 1959]", "old_index_query": "monza 1950s winner"},
+  {"id": "q8", "question": "Which F1 drivers were born in Sao Paulo?", "lucene_query": "birth_place:\"sao paulo\"", "old_index_query": "born sao paulo"},
+  {"id": "q9", "question": "Which circuits had an F1 layout longer than 6 km?", "lucene_query": "type:circuit AND length_m:[6000 TO *]", "old_index_query": "circuit longer than 6 km"},
+  {"id": "q10", "question": "Which wet races did Ferrari win?", "lucene_query": "(weather:rain* OR weather:wet) AND winner_team:ferrari", "old_index_query": "ferrari win rain wet"}
+]

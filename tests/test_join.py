@@ -14,9 +14,16 @@ def test_career_span_from_career_fields():
 
 
 def test_career_span_falls_back_to_birth_and_death():
-    assert j.career_span("driver", {"birth_date": "1953-11-04"}) == (1967, 0)
-    assert j.career_span("driver", {"birth_date": "1919-11-20", "death_date": "2004-01-20"}) == (1933, 2004)
+    assert j.career_span("driver", {"birth_date": "1953-11-04"}) == (1970, 0)
+    assert j.career_span("driver", {"birth_date": "1919-11-20", "death_date": "2004-01-20"}) == (1936, 2004)
     assert j.career_span("driver", {}) == (0, 0)
+
+
+def test_circuit_title_without_generic_words_is_a_key():
+    page = {"title": "Circuit Bremgarten", "wiki_type": "circuit", "infobox": {"name": "Circuit Bremgarten"}}
+    keys = {(k, p) for _, k, p, _ in j.wiki_page_keys(page)}
+    assert ("bremgarten", 3) in keys
+    assert ("circuit bremgarten", 0) in keys
 
 
 def test_career_span_team_uses_debut():

@@ -7,8 +7,11 @@ data/
 extracted/
 index/
 crawl_history.csv
+lucene_index/
 out/*
 data/
 index/
 lucene_index/
 *.bz2
+`n*.bz2
+lucene_stopwords.txt

@@ -50,7 +50,6 @@ def init_worker(encoding: str) -> None:
     ENCODING = encoding
 
 
-
 def page_stats(filename: str) -> tuple[str, int, int, int]:
     path = os.path.join(extractor.DATA_DIR, filename)
     with open(path, encoding="utf-8") as f:
@@ -75,7 +74,6 @@ def corpus_stats(workers: int) -> dict:
     return dict(sorted(stats.items()))
 
 
-
 def table_stats() -> dict:
     stats = {}
     for name in sorted(f for f in os.listdir(extractor.OUT_DIR) if f.endswith(".jsonl")):
@@ -85,7 +83,6 @@ def table_stats() -> dict:
         stats[name.removesuffix(".jsonl")] = {"rows": content.count("\n"), "bytes": os.path.getsize(path),
                                               "tokens": count_tokens(content)}
     return stats
-
 
 
 def index_stats() -> dict:
@@ -103,7 +100,6 @@ def index_stats() -> dict:
     with open(indexer.INDEX_FILE, encoding="utf-8") as f:
         vocabulary = len(json.load(f)["postings"])
     return {"vocabulary": vocabulary, "types": dict(sorted(stats.items()))}
-
 
 
 def mb(size: int) -> str:

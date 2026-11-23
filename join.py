@@ -60,14 +60,12 @@ MIN_RACING_AGE = 17
 SEASON_GAP = 10
 
 
-
 def table(sc, extracted: str, name: str):
     base = extracted.rstrip("/")
     for path in ("{}/{}".format(base, name), "{}/{}.jsonl".format(base, name)):
         if path_exists(sc, path):
             return read_jsonl(sc, path)
     return sc.emptyRDD()
-
 
 
 def name_variants(name: str) -> list:
@@ -195,7 +193,6 @@ def teams_rdd(sc, extracted: str):
                              candidates=team_variants(kv[1]["name"])))
 
 
-
 def read_wiki_pages(sc, wiki: str):
     pages = read_jsonl(sc, wiki + "/wiki_pages").map(lambda p: (p["title"], (1, p)))
     if path_exists(sc, wiki + "/wiki_pages_f1"):
@@ -214,6 +211,10 @@ def wiki_page_keys(page: dict):
         if short:
             yield wiki_type, " ".join(short), 3, title
             yield wiki_type, short[0], 4, title
+    if wiki_type == "circuit":
+        short = " ".join(GENERIC_CIRCUIT_WORDS.sub(" ", join_key(title)).split())
+        if short and short != join_key(title):
+            yield wiki_type, short, 3, title
     if wiki_type == "grand_prix":
         year = re.match(r"^\d{4}$", box.get("year", "")) or GP_TITLE_YEAR.match(title)
         race_no = re.match(r"^\d+", box.get("race_no", ""))
@@ -272,7 +273,6 @@ def career_span(wiki_type: str, infobox: dict) -> tuple:
 def season_gaps(seasons: list) -> list:
     seasons = sorted(set(seasons))
     return [(a, b) for a, b in zip(seasons, seasons[1:]) if b - a >= SEASON_GAP]
-
 
 
 def select_attributes(entity_type: str, infobox: dict) -> dict:
@@ -357,6 +357,7 @@ def main() -> None:
                          .map(lambda k: (k.key, (k.wiki_type, k.wiki_title))).collect())
     report = build_report(joined, entities, any_type_keys, pages, args)
     write_text(sc, out + "/join_report.json", json.dumps(report, ensure_ascii=False, indent=2))
+    write_text(sc, out + "/join_report.md", report_markdown(report))
     spark.stop()
 
 
@@ -372,7 +373,6 @@ def output_row(entity: dict, match, page) -> dict:
     return row
 
 
-
 def build_report(joined, entities, any_type_keys: dict, pages, args) -> dict:
     stats = dict(joined.map(lambda r: (r["entity_type"], (1, 1 if "wiki_title" in r else 0, 1 if r.get(
         "match_rule", "").startswith("second") else 0))).reduceByKey(lambda a, b: tuple(x + y for x, y in zip(a, b)))
@@ -380,6 +380,9 @@ def build_report(joined, entities, any_type_keys: dict, pages, args) -> dict:
     unique = dict(joined.filter(lambda r: "wiki_title" in r).map(lambda r: (r["entity_type"], r["wiki_title"]))
                   .distinct().countByKey())
     wiki_types = dict(pages.map(lambda p: p["wiki_type"]).countByValue())
+    filled = dict(joined.filter(lambda r: r.get("wiki"))
+                  .flatMap(lambda r: [((r["entity_type"], f), 1) for f in r["wiki"]])
+                  .reduceByKey(lambda a, b: a + b).collect())
     by_type = {}
     for t in ENTITY_TYPES:
         total, matched, second = stats.get(t, (0, 0, 0))
@@ -408,7 +411,9 @@ def build_report(joined, entities, any_type_keys: dict, pages, args) -> dict:
         "unmatched_examples": [{"entity_type": e["entity_type"], "name": e["name"],
                                 "keys": [k for _, k in e["candidates"]],
                                 "reason": unmatched_reason(e, any_type_keys)} for e in bad],
-        "attributes": {t: {"fields": list(WIKI_ATTRIBUTES[t])} for t in ENTITY_TYPES},
+        "attributes": {t: {"fields": list(WIKI_ATTRIBUTES[t]),
+                           "filled": {f: filled.get((t, f), 0) for f in WIKI_ATTRIBUTES[t]}}
+                       for t in ENTITY_TYPES},
         "possible_merged_drivers": possible_merged_drivers(joined),
     }
 
@@ -423,6 +428,36 @@ def possible_merged_drivers(joined) -> list:
             for r in sorted(rows, key=lambda r: r["name"])]
 
 
+def report_markdown(report: dict) -> str:
+    lines = ["# Join formula1.com x Wikipedia", ""]
+    if report["label"]:
+        lines += ["> **{}**".format(report["label"]), ""]
+    lines += ["Входные данные: `{}` + `{}`".format(report["extracted"], report["wiki"]), "",
+              "| Тип | Наших сущностей | Сопоставлено | Из них 2-й проход | Покрытие | Уникальных wiki-страниц |",
+              "|---|---:|---:|---:|---:|---:|"]
+    for t, s in report["by_type"].items():
+        lines.append("| {} | {} | {} | {} | {}% | {} |".format(t, s["entities"], s["matched"],
+                                                            s["matched_second_pass"], s["coverage_pct"],
+                                                            s["unique_wiki_pages"]))
+    s = report["total"]
+    lines.append("| **итого** | {} | {} | {} | {}% | **{}** |".format(
+        s["entities"], s["matched"], s["matched_second_pass"], s["coverage_pct"], s["unique_wiki_pages"]))
+    lines += ["", "## Wiki-атрибуты (сколько сопоставленных сущностей получили атрибут)", ""]
+    for t, a in report["attributes"].items():
+        lines.append("- **{}**: {}".format(t, ", ".join("{} {}".format(f, n) for f, n in a["filled"].items())))
+    lines += ["", "## Примеры совпадений", ""]
+    for r in report["matched_examples"]:
+        attrs = ", ".join("{}: {}".format(k, v) for k, v in list(r["wiki"].items())[:5])
+        lines.append("- **{}** `{}` -> [{}] ({}) - {}".format(r["entity_type"], r["name"], r["wiki_title"],
+                                                           r["match_rule"], attrs))
+    lines += ["", "## Примеры несовпадений", ""]
+    for r in report["unmatched_examples"]:
+        lines.append("- **{}** `{}`: {}".format(r["entity_type"], r["name"], r["reason"]))
+    lines += ["", "## Возможно склеенные тёзки", ""]
+    for r in report["possible_merged_drivers"]:
+        lines.append("- {} ({}-{}), разрывы {}, wiki: {}".format(r["name"], r["first_season"], r["last_season"],
+                                                               r["season_gaps"], r["wiki_title"]))
+    return "\n".join(lines) + "\n"
 
 
 if __name__ == "__main__":
